@@ -2,8 +2,7 @@
 
 A ten class land cover classifier over the EuroSAT RGB dataset, built by taking
 a ResNet-50 pretrained on ImageNet and retraining only its final layer on
-satellite image patches. Accuracy of about 92 percent on a held out test set
-that took no part in training or model selection.
+satellite image patches.
 
 This project follows the transfer learning recipe from the MachineLearning
 Mastery article and explains each choice as it is made: the data split, the
@@ -46,13 +45,14 @@ the test split only. Copy the command from
 
 | Metric | Value |
 | --- | --- |
-| Overall accuracy | 92.2 percent |
-| Top 5 accuracy | 99.4 percent |
+| Overall accuracy | _not yet written by an evaluation run_ |
+| Top 5 accuracy | _not yet written by an evaluation run_ |
 | Training images used | 4,000 of 21,600 |
 | Validation images | 600, capped for CPU run time |
 | Test images | 2,700 |
 | Epochs | 5, head only |
 | Trainable parameters | 20,490 of 23,528,522 (0.09 percent) |
+| Training batch size | 16 |
 
 Two classes are responsible for most of the remaining errors, and they are the
 two that overlap physically. `HerbaceousVegetation` and `Pasture` are both grass
@@ -167,11 +167,13 @@ see [Known limitations](#known-limitations).
 ### Training
 
 The head is trained with SGD, a learning rate of 0.01, momentum of 0.9 and
-weight decay of 1e-4, for 5 epochs with a batch size of 32. The reported number
-is the accuracy on the held out test split after the final epoch, not the best
-validation accuracy seen during training, which is a difference worth stating
-explicitly because the second number is always the larger and always the flatter
-of the two.
+weight decay of 1e-4, for 5 epochs with a batch size of 16. The batch size is 16
+rather than the 32 the config defaults to because of the memory limit this run
+was carried out under, which is described under
+[Known limitations](#known-limitations). The reported number is the accuracy on
+the held out test split after the final epoch, not the best validation accuracy
+seen during training, which is a difference worth stating explicitly because the
+second number is always the larger and always the flatter of the two.
 
 ## Running the pipeline
 
@@ -229,7 +231,7 @@ covers the same code paths on synthetic data in seconds.
 
 ```bash
 python -m landcover.data --force
-python -m landcover.train --head-epochs 5 --skip-finetune --max-train-images 4000
+python -m landcover.train --head-epochs 5 --skip-finetune --max-train-images 4000 --batch-size 16 --workers 2
 python -m landcover.evaluate
 python -m landcover.plot
 ```
@@ -246,7 +248,7 @@ had 2 usable CPU threads and no GPU. At 628 milliseconds per image for the head
 stage, the full 21,600 image training set at the originally intended 6 plus 4
 epochs would have taken about 67 hours. The committed run trains on a class
 stratified 4,000 image subset for 5 epochs instead, which takes about 3.2 hours
-and reaches 92.2 percent. The unfreezing stage is measured at 1856 milliseconds
+and reaches the accuracy reported above. The unfreezing stage is measured at 1856 milliseconds
 per image and was not included for the same reason.
 
 The reported number is therefore a test accuracy on a subset trained model, not
