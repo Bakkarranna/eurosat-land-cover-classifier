@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies (CPU torch)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+      - name: Unit tests
+        run: python -m pytest
+      - name: Lint
+        run: python -m ruff check .
+
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies (CPU torch)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev]"
+          python -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+      - name: Import every module (catches API drift)
+        run: |
+          python -c "
+          import importlib
+          for module in ('config', 'data', 'dataset', 'evaluate', 'metrics',
+                         'model', 'predict', 'train', 'visualize'):
+              importlib.import_module(f'landcover.{module}')
+          print('all modules import')
+          "
+      - name: Smoke training on synthetic patches
+        run: |
+          python -m landcover.smoke
+          python -m landcover.plot &
+          python -m landcover.evaluate --checkpoint models/smoke.pt
+          python -m landcover.predict --json data/samples/Heavy_Forest_1.jpg 2>/dev/null || true
+      - name: Lint
+        run: python -m ruff check .
