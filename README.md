@@ -45,8 +45,8 @@ the test split only. Copy the command from
 
 | Metric | Value |
 | --- | --- |
-| Overall accuracy | _not yet written by an evaluation run_ |
-| Top 5 accuracy | _not yet written by an evaluation run_ |
+| Overall accuracy | _no test evaluation has been run yet_ |
+| Top 5 accuracy | _no test evaluation has been run yet_ |
 | Training images used | 4,000 of 21,600 |
 | Validation images | 600, capped for CPU run time |
 | Test images | 2,700 |
@@ -184,7 +184,7 @@ artifacts to disk rather than passing them in memory.
 # 1. Download and index the dataset (skipped on later runs, the split is cached)
 python -m landcover.data --force
 
-# 2. Train the head. About 3.2 hours on 2 CPU threads.
+# 2. Train the head. About 2.3 hours on 4 threads and 2 dataloader workers.
 python -m landcover.train --head-epochs 5 --skip-finetune --max-train-images 4000
 
 # 3. Score on the held out test split. About 10 minutes.
@@ -217,15 +217,15 @@ data or the network.
 
 ## Continuous integration
 
-Two workflows run on every push and pull request.
+Two jobs run on every push and pull request.
 
-`ci.yml` installs the project on a clean runner, formats and lints it with
-`ruff`, runs the type check, and runs the test suite. `test.yml` runs the test
-suite on all supported Python versions with the lowest and highest pinned
-dependency versions, so a change that only works on one combination is caught.
+`ci.yml` installs the project on a clean Python 3.11 runner, runs the unit tests
+with `pytest`, lints with `ruff`, and then runs a smoke job that imports every
+module and trains, evaluates, plots and predicts on synthetic patches to catch
+API drift.
 
-Neither workflow trains a model: a training run costs hours and the test suite
-covers the same code paths on synthetic data in seconds.
+No workflow trains a model: a training run costs hours, and the test suite covers
+the same code paths on synthetic data in seconds.
 
 ## Reproducing the numbers
 
@@ -243,15 +243,23 @@ the per epoch losses and accuracies that produced the learning curve in
 
 ## Known limitations
 
-**This run was done on CPU and is smaller than intended.** The machine available
-had 2 usable CPU threads and no GPU. At 628 milliseconds per image for the head
-stage, the full 21,600 image training set at the originally intended 6 plus 4
-epochs would have taken about 67 hours. The committed run trains on a class
-stratified 4,000 image subset for 5 epochs instead, which takes about 3.2 hours
-and reaches the accuracy reported above. The unfreezing stage is measured at 1856 milliseconds
-per image and was not included for the same reason.
+**This run was done on CPU and is smaller than intended.** The machine available had
+no GPU. A separate benchmark measured the head stage at 628 milliseconds per image
+at batch size 1, so the originally intended 6 plus 4 epochs over the full 21,600
+image training set would have taken about 67 hours. The committed run therefore
+trains a class stratified 4,000 image subset for 5 epochs, which took 2.3 hours
+(8,381 seconds), with the fine tuning stage omitted for the same reason.
 
-The reported number is therefore a test accuracy on a subset trained model, not
+The 628 millisecond figure is a batch of one benchmark; the committed run measured
+0.42 seconds per image including both passes, so a full run would be faster than
+the benchmark alone suggests. Neither number is a speedup estimate, only what was
+observed.
+
+The accuracy reported here is a validation accuracy from the final epoch, 82.67
+percent over 600 validation images, as recorded in `results/train_history.json`.
+It is not cherry picked from a larger sweep. It is not a test accuracy: the
+results table stays blank until `python -m landcover.evaluate` has run and written
+`results/metrics.json`, which is the number a reader should quote.
 the number the full configuration would reach. With the full dataset and a GPU
 the same code with the same seed would be expected to land higher, and the
 figures in this README were not cherry picked from a larger sweep.
