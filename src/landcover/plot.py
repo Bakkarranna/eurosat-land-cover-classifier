@@ -63,15 +63,19 @@ def plot_confusion_matrix(metrics_path: Path, output_path: Path) -> None:
     plt.close(figure)
 
 
-def plot_sample_images(output_path: Path, per_class: int = 5) -> None:
+def plot_sample_images(
+    output_path: Path, per_class: int = 5, checkpoint: Path | None = None
+) -> None:
     """Show a few real test patches per class so the reader sees the input."""
     split = split_dataset(index_dataset())
     device = resolve_device()
-    model, _ = load_checkpoint(config.MODEL_PATH, device=str(device))
+    model, _ = load_checkpoint(checkpoint or config.MODEL_PATH, device=str(device))
 
     chosen: list[tuple[np.ndarray, str, str]] = []
+    rows = 1
     for class_index, class_name in enumerate(config.CLASSES):
         samples = [p for p, i in split["test"] if i == class_index][:per_class]
+        rows = max(rows, len(samples))
         for path in samples:
             tensor = build_eval_transform()(Image.open(path).convert("RGB"))
             array = (tensor * 0.25 + 0.45).clamp(0, 1).permute(1, 2, 0).numpy()
@@ -80,8 +84,12 @@ def plot_sample_images(output_path: Path, per_class: int = 5) -> None:
             chosen.append((array, class_name, config.CLASSES[prediction]))
 
     columns = len(config.CLASSES)
-    figure, axes = plt.subplots(per_class, columns, figsize=(columns * 1.25, per_class * 1.35))
-    for axis, (array, true, predicted) in zip(np.ravel(axes), chosen, strict=True):
+    # The grid follows the patches that were actually selected: a test split with
+    # fewer than ``per_class`` patches in a class (a smoke run has two) would
+    # otherwise leave the requested rows empty and mismatch the axes.
+    figure, axes = plt.subplots(rows, columns, figsize=(columns * 1.25, rows * 1.35))
+    flat_axes = np.ravel(axes)
+    for axis, (array, true, predicted) in zip(flat_axes, chosen, strict=False):
         axis.imshow(array)
         axis.set_xticks([])
         axis.set_yticks([])
@@ -90,7 +98,9 @@ def plot_sample_images(output_path: Path, per_class: int = 5) -> None:
             fontsize=6,
             color="#333" if true == predicted else "#b00",
         )
-    for axis, class_name in zip(axes[0], config.CLASSES, strict=True):
+    for axis in flat_axes[len(chosen) :]:
+        axis.axis("off")
+    for axis, class_name in zip(flat_axes[:columns], config.CLASSES, strict=True):
         axis.set_title(class_name[:12], fontsize=6)
     figure.suptitle("Test patches with the predicted class below each one", fontsize=9)
     figure.tight_layout()
@@ -129,8 +139,8 @@ def plot_history(output_path: Path) -> None:
     loss_axis.set_xlabel("epoch")
     loss_axis.set_ylabel("loss")
     loss_axis.legend(frameon=False)
-    accuracy_axis.plot(epochs, [e["train_acc"] for e in history], label="train")
-    accuracy_axis.plot(epochs, [e["val_acc"] for e in history], label="val")
+    accuracy_axis.plot(epochs, [e["train_accuracy"] for e in history], label="train")
+    accuracy_axis.plot(epochs, [e["val_accuracy"] for e in history], label="val")
     accuracy_axis.set_xlabel("epoch")
     accuracy_axis.set_ylabel("accuracy")
     accuracy_axis.set_ylim(0, 1)
@@ -144,12 +154,14 @@ def plot_history(output_path: Path) -> None:
 def main(argv=None) -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--metrics", type=Path, default=config.METRICS_PATH)
+    parser.add_argument("--checkpoint", type=Path, default=None,
+                        help="checkpoint for the sample patch figure; defaults to config.MODEL_PATH")
     args = parser.parse_args(argv)
     config.FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     plot_confusion_matrix(args.metrics, config.FIGURES_DIR / "confusion_matrix.png")
     plot_history(config.FIGURES_DIR / "history.png")
     plot_class_distribution(config.FIGURES_DIR / "class_distribution.png")
-    plot_sample_images(config.FIGURES_DIR / "sample_patches.png")
+    plot_sample_images(config.FIGURES_DIR / "sample_patches.png", checkpoint=args.checkpoint)
     for name in ("confusion_matrix.png", "history.png", "class_distribution.png", "sample_patches.png"):
         print(f"wrote {config.FIGURES_DIR / name}")
 

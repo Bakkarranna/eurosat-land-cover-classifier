@@ -13,6 +13,7 @@ the real EuroSAT images on disk and never needs the 90 MB download.
 
 from __future__ import annotations
 
+import argparse
 import tempfile
 from pathlib import Path
 
@@ -20,6 +21,7 @@ import numpy as np
 from PIL import Image
 
 from . import config
+from . import data as data_module
 from . import evaluate as evaluate_module
 from . import model as model_module
 from . import plot as plot_module
@@ -84,7 +86,7 @@ def _point_at_temporary_root(work: Path) -> None:
 
 def main(argv=None) -> dict:
     """Build synthetic patches, train, evaluate, plot and predict with them."""
-    parser = config.argparse.ArgumentParser(description="Run the pipeline on synthetic patches")
+    parser = argparse.ArgumentParser(description="Run the pipeline on synthetic patches")
     parser.add_argument("--per-class", type=int, default=20)
     parser.add_argument("--epochs", type=int, default=1)
     parser.add_argument("--batch-size", type=int, default=8)
@@ -96,6 +98,12 @@ def main(argv=None) -> dict:
         root = build_synthetic_dataset(config.IMAGES_DIR, per_class=args.per_class)
         print(f"wrote {args.per_class * config.N_CLASSES} synthetic patches to {root}")
 
+        # The class distribution figure is drawn from the dataset summary, so the
+        # summary has to exist before the figures are rebuilt.
+        summary = data_module.dataset_summary()
+        data_module.write_summary_csv(summary, config.SUMMARY_CSV_PATH)
+        data_module.write_summary_json(summary, config.SUMMARY_JSON_PATH)
+
         record = train_module.main(
             [
                 "--epochs",
@@ -105,14 +113,16 @@ def main(argv=None) -> dict:
                 str(args.batch_size),
                 "--workers",
                 "0",
-                "--pretrained",
                 "--out",
                 str(config.SMOKE_MODEL_PATH),
             ]
         )
         report = evaluate_module.evaluate_checkpoint(checkpoint=config.SMOKE_MODEL_PATH, workers=0)
-        plot_module.main()
-        sample = next(sorted(root.glob("*/*.jpg")))
+        # An explicit argv keeps plot's parser off smoke's own flags, and points
+        # the sample patch figure at the checkpoint this run just trained rather
+        # than the full run's, which does not exist yet.
+        plot_module.main(["--checkpoint", str(config.SMOKE_MODEL_PATH)])
+        sample = sorted(root.glob("*/*.jpg"))[0]
         predictions = predict_module.predict_paths([sample], config.SMOKE_MODEL_PATH)
         model, payload = model_module.load_checkpoint(config.SMOKE_MODEL_PATH)
         model.eval()
