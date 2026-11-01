@@ -1,0 +1,50 @@
+name: Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Publish the results page
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the page only references committed files
+        run: |
+          python - <<'PY'
+          import pathlib, re
+          html = pathlib.Path("docs/index.html").read_text(encoding="utf-8")
+          refs = [r for r in re.findall(r'(?:src|href)="([^"]+)"', html)
+                  if not r.startswith(("http", "#"))]
+          missing = [r for r in refs if not pathlib.Path("docs", r).exists()]
+          assert not missing, f"dangling references: {missing}"
+          print(f"{len(refs)} local references resolve")
+          PY
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

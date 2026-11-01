@@ -41,15 +41,11 @@ jobs:
           python -c "
           import importlib
           for module in ('config', 'data', 'dataset', 'evaluate', 'metrics',
-                         'model', 'predict', 'train', 'visualize'):
+                         'model', 'plot', 'predict', 'smoke', 'train'):
               importlib.import_module(f'landcover.{module}')
           print('all modules import')
           "
-      - name: Smoke training on synthetic patches
-        run: |
-          python -m landcover.smoke
-          python -m landcover.plot &
-          python -m landcover.evaluate --checkpoint models/smoke.pt
-          python -m landcover.predict --json data/samples/Heavy_Forest_1.jpg 2>/dev/null || true
+      - name: Smoke training, evaluation, plotting and prediction on synthetic patches
+        run: python -m landcover.smoke
       - name: Lint
         run: python -m ruff check .
