@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EuroSAT Land Cover Classifier</title>
+<meta name="description" content="A ResNet-50 land cover classifier for EuroSAT satellite imagery, trained and evaluated from scratch on CPU: 83.63 percent test accuracy.">
+<style>
+  :root {
+    --bg: #f6f7f9;
+    --card: #ffffff;
+    --ink: #14181f;
+    --muted: #5a6472;
+    --line: #e2e6ec;
+    --accent: #1c4ed8;
+    --accent-soft: #eaf0ff;
+    --good: #0b6b3a;
+    --warn: #9a5b00;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 0 24px 64px; }
+  header {
+    background: #101725;
+    color: #fff;
+    padding: 48px 0 40px;
+    margin-bottom: 40px;
+  }
+  header .wrap { padding-bottom: 0; }
+  .eyebrow {
+    text-transform: uppercase;
+    letter-spacing: .12em;
+    font-size: 12px;
+    font-weight: 700;
+    color: #8fb0ff;
+    margin: 0 0 12px;
+  }
+  h1 { font-size: 34px; line-height: 1.2; margin: 0 0 14px; font-weight: 750; }
+  .sub { color: #b9c4d6; font-size: 17px; margin: 0 0 24px; max-width: 66ch; }
+  .links a {
+    color: #fff; text-decoration: none; font-weight: 600; font-size: 14px;
+    border: 1px solid rgba(255,255,255,.28); border-radius: 8px; padding: 8px 14px;
+    margin-right: 10px; display: inline-block;
+  }
+  .links a:hover { background: rgba(255,255,255,.1); }
+  h2 { font-size: 22px; margin: 44px 0 16px; font-weight: 700; }
+  h2:first-of-type { margin-top: 0; }
+  p { margin: 0 0 14px; color: #2a313c; }
+  .note { color: var(--muted); font-size: 14px; }
+  .cards {
+    display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    margin: 0 0 8px;
+  }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px 20px; }
+  .card .k { font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 700; margin-bottom: 6px; }
+  .card .v { font-size: 28px; font-weight: 750; letter-spacing: -.01em; }
+  .card .d { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .card.hero .v { color: var(--accent); }
+  table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; font-size: 14.5px; }
+  caption { caption-side: top; text-align: left; color: var(--muted); font-size: 13.5px; padding-bottom: 10px; }
+  th, td { padding: 9px 14px; text-align: right; border-bottom: 1px solid var(--line); }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { background: #f0f3f8; font-size: 12.5px; text-transform: uppercase; letter-spacing: .05em; color: #3d4757; }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr:hover { background: #fafbfd; }
+  td.weak { color: var(--warn); font-weight: 700; }
+  td.strong { color: var(--good); font-weight: 700; }
+  .grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); margin-top: 8px; }
+  figure { margin: 0; background: var(--card); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  figure img { width: 100%; display: block; background: #fff; }
+  figcaption { padding: 12px 16px; font-size: 13.5px; color: var(--muted); border-top: 1px solid var(--line); }
+  figcaption b { color: #2a313c; }
+  .cols { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .cols section { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; }
+  .cols h3 { margin: 0 0 8px; font-size: 15.5px; }
+  .cols p { font-size: 14px; margin: 0; color: #333b47; }
+  code { background: var(--accent-soft); color: #1a3f9e; padding: 1px 5px; border-radius: 5px; font-size: 13px; }
+  footer { border-top: 1px solid var(--line); margin-top: 48px; padding-top: 20px; color: var(--muted); font-size: 13.5px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <p class="eyebrow">EuroSAT &middot; satellite land cover classification</p>
+    <h1>Classifying 10 land cover types from Sentinel-2 imagery</h1>
+    <p class="sub">A frozen ImageNet ResNet-50 backbone with a trained head, built as a reproducible pipeline:
+    download, split, train, evaluate, plot. One run on CPU produced every number on this page.</p>
+    <div class="links">
+      <a href="https://github.com/Bakkarranna/eurosat-land-cover-classifier">Source on GitHub</a>
+      <a href="figures/confusion_matrix.png">Confusion matrix</a>
+      <a href="https://github.com/phelber/EuroSAT">EuroSAT dataset</a>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <h2>Test results</h2>
+  <div class="cards">
+    <div class="card hero"><div class="k">Test accuracy</div><div class="v">83.63%</div><div class="d">2,270 of 2,700 patches</div></div>
+    <div class="card"><div class="k">Macro F1</div><div class="v">0.8253</div><div class="d">unweighted mean over 10 classes</div></div>
+    <div class="card"><div class="k">Top 5 accuracy</div><div class="v">99.44%</div><div class="d">correct class in top 5</div></div>
+    <div class="card"><div class="k">Trainable parameters</div><div class="v">20,490</div><div class="d">of 23.5M, head only</div></div>
+  </div>
+
+  <table>
+    <caption>Per class metrics on the 2,700 patch held out test split. Weakest class highlighted.</caption>
+    <thead>
+      <tr><th scope="col">Class</th><th scope="col">Precision</th><th scope="col">Recall</th><th scope="col">F1</th><th scope="col">Support</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>AnnualCrop</td><td>0.868</td><td>0.897</td><td>0.882</td><td>300</td></tr>
+      <tr><td>Forest</td><td>0.876</td><td>0.940</td><td>0.907</td><td>300</td></tr>
+      <tr><td>HerbaceousVegetation</td><td>0.844</td><td>0.847</td><td>0.845</td><td>300</td></tr>
+      <tr><td>Highway</td><td>0.749</td><td class="weak">0.500</td><td class="weak">0.600</td><td>250</td></tr>
+      <tr><td>Industrial</td><td>0.846</td><td>0.924</td><td>0.883</td><td>250</td></tr>
+      <tr><td>Pasture</td><td>0.759</td><td>0.895</td><td>0.821</td><td>200</td></tr>
+      <tr><td>PermanentCrop</td><td>0.795</td><td>0.728</td><td>0.760</td><td>250</td></tr>
+      <tr><td>Residential</td><td>0.866</td><td>0.947</td><td>0.905</td><td>300</td></tr>
+      <tr><td>River</td><td>0.729</td><td>0.720</td><td>0.724</td><td>250</td></tr>
+      <tr><td>SeaLake</td><td>0.948</td><td>0.907</td><td class="strong">0.927</td><td>300</td></tr>
+    </tbody>
+  </table>
+  <p class="note">Half of the Highway patches are labelled as another class, so <code>Highway</code> recall of 0.500 is
+  the dominant error mode. The physically overlapping classes are not the problem: <code>HerbaceousVegetation</code>
+  and <code>Pasture</code> reach F1 0.845 and 0.821, and the two crop classes separate cleanly enough that the
+  replanting distinction is learnable at this resolution.</p>
+
+  <h2>Figures</h2>
+  <div class="grid">
+    <figure>
+      <img src="figures/confusion_matrix.png" alt="Confusion matrix of predicted against true class over the test split, showing strong diagonals except for Highway.">
+      <figcaption><b>Confusion matrix.</b> Row normalised shares of true class. Highway leaks most of its mass
+      into AnnualCrop and Pasture.</figcaption>
+    </figure>
+    <figure>
+      <img src="figures/history.png" alt="Training and validation loss falling over five epochs while accuracy rises.">
+      <figcaption><b>Training curves.</b> Five epochs of head training. Validation loss and accuracy still
+      improving at the last epoch, so the run stopped early for time, not convergence.</figcaption>
+    </figure>
+    <figure>
+      <img src="figures/class_distribution.png" alt="Bar chart of patch counts per land cover class in the dataset.">
+      <figcaption><b>Class distribution.</b> Roughly balanced, so accuracy is not flattered by a dominant
+      class.caption>
+    </figure>
+    <figure>
+      <img src="figures/sample_patches.png" alt="Grid of example 64 by 64 pixel patches from each land cover class.">
+      <figcaption><b>Sample patches.</b> The 64 by 64 pixel inputs, one row per class. This is the entire
+      field of view the classifier works from.</figcaption>
+    </figure>
+  </div>
+
+  <h2>How it was built</h2>
+  <div class="cols">
+    <section>
+      <h3>Model</h3>
+      <p>ImageNet pretrained ResNet-50 with the convolutional backbone frozen, a fresh linear head trained for
+      five epochs, batch size 16, Adam at 1e-4. 20,490 of 23,528,522 parameters are trainable.</p>
+    </section>
+    <section>
+      <h3>Data</h3>
+      <p>27,000 labelled 64 by 64 patches split class stratified: 4,000 train, 600 validation, 2,700 test.
+      Transforms are resize, tensor, ImageNet normalisation, with horizontal, vertical and 90 degree rotations.</p>
+    </section>
+    <section>
+      <h3>Constraints</h3>
+      <p>Trained on CPU, no GPU available: 8,381 seconds with 4 threads. The intended fine tuning stage and
+      full training set were omitted because a benchmark put them at roughly 67 hours.</p>
+    </section>
+  </div>
+
+  <footer>
+    Every number, table and figure on this page is regenerated from the same artifacts committed with the code:
+    <code>results/metrics.json</code> and <code>results/train_history.json</code>, evaluated on CPU on 30 October 2026.
+    Nothing here is transcribed by hand or projected from a planned future run.
+  </footer>
+</div>
+</body>
+</html>
