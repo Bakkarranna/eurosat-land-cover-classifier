@@ -1,0 +1,291 @@
+{
+  "evaluated_at": "2026-10-30T17:11:47.490644+00:00",
+  "device": "cpu",
+  "checkpoint": "D:\\Downloads\\Personal Agentic Work\\ml-projects\\eurosat-land-cover-classifier\\models\\resnet50_landcover.pt",
+  "n_test": 2700,
+  "classes": [
+    "AnnualCrop",
+    "Forest",
+    "HerbaceousVegetation",
+    "Highway",
+    "Industrial",
+    "Pasture",
+    "PermanentCrop",
+    "Residential",
+    "River",
+    "SeaLake"
+  ],
+  "accuracy": 0.8362962962962963,
+  "macro_f1": 0.8253431364902124,
+  "top5_accuracy": 0.9944444444444445,
+  "per_class": {
+    "precision": [
+      0.867741935483871,
+      0.8757763975155279,
+      0.8438538205980066,
+      0.7485029940119761,
+      0.8461538461538461,
+      0.7584745762711864,
+      0.7947598253275109,
+      0.8658536585365854,
+      0.728744939271255,
+      0.9477351916376306
+    ],
+    "recall": [
+      0.8966666666666666,
+      0.94,
+      0.8466666666666667,
+      0.5,
+      0.924,
+      0.895,
+      0.728,
+      0.9466666666666667,
+      0.72,
+      0.9066666666666666
+    ],
+    "f1": [
+      0.8819672131147541,
+      0.9067524115755627,
+      0.8452579034941764,
+      0.5995203836930456,
+      0.8833652007648184,
+      0.8211009174311926,
+      0.7599164926931106,
+      0.9044585987261147,
+      0.7243460764587525,
+      0.9267461669505963
+    ],
+    "support": [
+      300,
+      300,
+      300,
+      250,
+      250,
+      200,
+      250,
+      300,
+      250,
+      300
+    ],
+    "accuracy": 0.8362962962962963,
+    "macro_precision": 0.8277597184807396,
+    "macro_recall": 0.8303666666666667,
+    "macro_f1": 0.8253431364902124
+  },
+  "confusion_matrix": [
+    [
+      269,
+      0,
+      0,
+      4,
+      0,
+      3,
+      13,
+      0,
+      8,
+      3
+    ],
+    [
+      0,
+      282,
+      3,
+      1,
+      0,
+      4,
+      0,
+      0,
+      1,
+      9
+    ],
+    [
+      3,
+      15,
+      254,
+      1,
+      1,
+      4,
+      11,
+      7,
+      1,
+      3
+    ],
+    [
+      23,
+      4,
+      6,
+      125,
+      16,
+      15,
+      13,
+      17,
+      31,
+      0
+    ],
+    [
+      1,
+      0,
+      2,
+      3,
+      231,
+      0,
+      2,
+      9,
+      2,
+      0
+    ],
+    [
+      1,
+      6,
+      5,
+      1,
+      0,
+      179,
+      3,
+      0,
+      5,
+      0
+    ],
+    [
+      6,
+      3,
+      21,
+      18,
+      7,
+      3,
+      182,
+      7,
+      3,
+      0
+    ],
+    [
+      0,
+      0,
+      3,
+      1,
+      10,
+      0,
+      1,
+      284,
+      1,
+      0
+    ],
+    [
+      5,
+      8,
+      7,
+      13,
+      8,
+      21,
+      4,
+      4,
+      180,
+      0
+    ],
+    [
+      2,
+      4,
+      0,
+      0,
+      0,
+      7,
+      0,
+      0,
+      15,
+      272
+    ]
+  ],
+  "classification_report": "class                  precision    recall        f1   support\n--------------------------------------------------------------\nAnnualCrop                0.8677    0.8967    0.8820       300\nForest                    0.8758    0.9400    0.9068       300\nHerbaceousVegetation      0.8439    0.8467    0.8453       300\nHighway                   0.7485    0.5000    0.5995       250\nIndustrial                0.8462    0.9240    0.8834       250\nPasture                   0.7585    0.8950    0.8211       200\nPermanentCrop             0.7948    0.7280    0.7599       250\nResidential               0.8659    0.9467    0.9045       300\nRiver                     0.7287    0.7200    0.7243       250\nSeaLake                   0.9477    0.9067    0.9267       300\n--------------------------------------------------------------\naccuracy                                      0.8363      2700\nmacro avg                 0.8278    0.8304    0.8253      2700",
+  "worst_confusions": [
+    {
+      "actual": "Highway",
+      "predicted": "River",
+      "count": 31
+    },
+    {
+      "actual": "Highway",
+      "predicted": "AnnualCrop",
+      "count": 23
+    },
+    {
+      "actual": "PermanentCrop",
+      "predicted": "HerbaceousVegetation",
+      "count": 21
+    },
+    {
+      "actual": "River",
+      "predicted": "Pasture",
+      "count": 21
+    },
+    {
+      "actual": "PermanentCrop",
+      "predicted": "Highway",
+      "count": 18
+    }
+  ],
+  "run": {
+    "trained_at": "2026-10-30T14:37:52.991685+00:00",
+    "device": "cpu",
+    "python": "3.13.14",
+    "torch": "2.15.0+cpu",
+    "seconds": 8381.4,
+    "head_epochs": 5,
+    "finetune_epochs": 0,
+    "batch_size": 16,
+    "train_images": 4000,
+    "val_images": 600,
+    "seed": 0,
+    "threads": 4,
+    "workers": 2,
+    "history": [
+      {
+        "stage": "head",
+        "epoch": 1,
+        "train_loss": 1.6881,
+        "train_accuracy": 0.5697,
+        "val_loss": 1.2112,
+        "val_accuracy": 0.755,
+        "val_macro_f1": 0.7433
+      },
+      {
+        "stage": "head",
+        "epoch": 2,
+        "train_loss": 1.1471,
+        "train_accuracy": 0.7278,
+        "val_loss": 0.9016,
+        "val_accuracy": 0.775,
+        "val_macro_f1": 0.7617
+      },
+      {
+        "stage": "head",
+        "epoch": 3,
+        "train_loss": 0.9516,
+        "train_accuracy": 0.7628,
+        "val_loss": 0.7905,
+        "val_accuracy": 0.8,
+        "val_macro_f1": 0.7894
+      },
+      {
+        "stage": "head",
+        "epoch": 4,
+        "train_loss": 0.8388,
+        "train_accuracy": 0.783,
+        "val_loss": 0.6835,
+        "val_accuracy": 0.815,
+        "val_macro_f1": 0.8049
+      },
+      {
+        "stage": "head",
+        "epoch": 5,
+        "train_loss": 0.7517,
+        "train_accuracy": 0.8033,
+        "val_loss": 0.6403,
+        "val_accuracy": 0.8267,
+        "val_macro_f1": 0.818
+      }
+    ],
+    "parameters": {
+      "total": 23528522,
+      "trainable": 20490
+    }
+  }
+}
