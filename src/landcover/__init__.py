@@ -1,8 +1,7 @@
 """Land cover classification of Sentinel-2 imagery with a transfer learned ResNet-50.
 
 The package holds the whole pipeline for the project: dataset indexing and
-splitting, the transfer learning model, training, evaluation, figures, the
-results table and the standalone results console.
+splitting, the transfer learning model, training, evaluation and figures.
 
 Modules
 -------
@@ -16,8 +15,6 @@ predict     Single image inference from a saved checkpoint.
 plot        Figures for the README and the documentation.
 metrics     Metric helpers shared by evaluation, training, figures and tests.
 smoke       A minute long end to end run on synthetic patches.
-results_table  Human readable result tables (markdown and csv).
-dashboard     The self-contained results console written to docs/.
 """
 
 __version__ = "0.1.0"
