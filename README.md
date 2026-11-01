@@ -43,7 +43,9 @@ each other.
 The numbers below come from one measured run, scored on the test split only. The
 checkpoint that produced them is about 90 MB and is not committed, so to
 regenerate these numbers rather than quote them, follow
-[Reproducing the numbers](#reproducing-the-numbers).
+[Reproducing the numbers](#reproducing-the-numbers). They are also published as
+a [static results page](https://bakkarranna.github.io/eurosat-land-cover-classifier/)
+built from the same files.
 
 | Metric | Value |
 | --- | --- |
@@ -257,9 +259,9 @@ anything under `docs/` publishes that directory to GitHub Pages with
 `actions/deploy-pages`. Before it uploads, a step asserts that every `src` and
 `href` in `docs/index.html` resolves to a file that is actually committed, so a
 renamed or deleted figure fails the deploy rather than shipping a page with
-broken images. The page is served from the standard
-`https://<user>.github.io/<repo>/` address and can also be rebuilt by hand from
-the Actions tab.
+broken images. The live page is at
+[bakarranna.github.io/eurosat-land-cover-classifier](https://bakkarranna.github.io/eurosat-land-cover-classifier/),
+and any deploy can be repeated by hand from the Actions tab.
 
 ## Reproducing the numbers
 
