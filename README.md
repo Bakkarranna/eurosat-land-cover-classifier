@@ -20,6 +20,7 @@ and where the numbers in this README come from.
 - [Running the pipeline](#running-the-pipeline)
 - [Tests](#tests)
 - [Continuous integration](#continuous-integration)
+- [Publishing](#publishing)
 - [Reproducing the numbers](#reproducing-the-numbers)
 - [Known limitations](#known-limitations)
 
@@ -39,28 +40,48 @@ each other.
 
 ## Results
 
-The numbers below come from the checkpoint stored in this repository, scored on
-the test split only. Copy the command from
-[Reproducing the numbers](#reproducing-the-numbers) to regenerate them.
+The numbers below come from one measured run, scored on the test split only. The
+checkpoint that produced them is about 90 MB and is not committed, so to
+regenerate these numbers rather than quote them, follow
+[Reproducing the numbers](#reproducing-the-numbers).
 
 | Metric | Value |
 | --- | --- |
-| Overall accuracy | _no test evaluation has been run yet_ |
-| Top 5 accuracy | _no test evaluation has been run yet_ |
+| Overall accuracy (test split) | 0.8363 (83.63 percent) |
+| Macro F1 (test split) | 0.8253 |
+| Top 5 accuracy | 0.9944 (99.44 percent) |
 | Training images used | 4,000 of 21,600 |
 | Validation images | 600, capped for CPU run time |
 | Test images | 2,700 |
 | Epochs | 5, head only |
 | Trainable parameters | 20,490 of 23,528,522 (0.09 percent) |
 | Training batch size | 16 |
+| Training time | 8,381 seconds (2 h 20 min) on CPU, 4 threads and 2 workers |
 
-Two classes are responsible for most of the remaining errors, and they are the
-two that overlap physically. `HerbaceousVegetation` and `Pasture` are both grass
-and are confused with each other in both directions, because grazing land and
-meadow land neither assert that livestock are present nor that they are absent.
-`AnnualCrop` and `PermanentCrop` are separated by whether the field is replanted
-each season, which is a question about farming practice rather than about
-colour, so both can be green in April and both can be bare in August.
+Per class precision, recall and F1 on the same 2,700 patch test split:
+
+| Class | Precision | Recall | F1 | Support |
+| --- | --- | --- | --- | --- |
+| AnnualCrop | 0.868 | 0.897 | 0.882 | 300 |
+| Forest | 0.876 | 0.940 | 0.907 | 300 |
+| HerbaceousVegetation | 0.844 | 0.847 | 0.845 | 300 |
+| Highway | 0.749 | 0.500 | 0.600 | 250 |
+| Industrial | 0.846 | 0.924 | 0.883 | 250 |
+| Pasture | 0.759 | 0.895 | 0.821 | 200 |
+| PermanentCrop | 0.795 | 0.728 | 0.760 | 250 |
+| Residential | 0.866 | 0.947 | 0.905 | 300 |
+| River | 0.729 | 0.720 | 0.724 | 250 |
+| SeaLake | 0.948 | 0.907 | 0.927 | 300 |
+
+`Highway` is the failure mode, and it is not a confusion between two physically
+similar classes: half of all Highway patches are labelled something else (recall
+0.500, F1 0.600). The grassland pair behaves far better than their overlap alone
+would suggest (`HerbaceousVegetation` F1 0.845, `Pasture` F1 0.821), and
+`AnnualCrop` and `PermanentCrop` separate well enough, at 0.882 and 0.760, that
+the replanting distinction is learnable from pixels. `River` is the next weakest
+class at F1 0.724. A top 5 accuracy of 0.994 says the correct class is almost
+always in the shortlist, so the residual error is ranking between neighbouring
+classes, which fine tuning the upper backbone blocks is the natural lever for.
 
 Figures are in [docs/figures](docs/figures) and are written from the same
 evaluation file the metrics come from, so they cannot drift from the table
@@ -83,6 +104,7 @@ src/landcover/
 data/               Downloaded archive and cached split, not committed
 results/            metrics.json, train_history.json, split.json, predictions.npz
 docs/figures/       Confusion matrix, history, class distribution, sample patches
+docs/index.html     Static results page, published to GitHub Pages
 models/             resnet50_landcover.pt, not committed
 tests/              pytest suite, all offline and fast
 .github/workflows/  CI and test validation
@@ -148,16 +170,17 @@ normalisation silently costs accuracy.
 ### What is frozen and what is trained
 
 ResNet-50 has about 23.5 million parameters. The final fully connected layer is
-replaced with one that outputs ten numbers instead of a thousand, which is about
-2.05 million parameters, and the convolutional layers below it are frozen.
+replaced with one that reads the 2,048 features the backbone produces and
+outputs ten numbers, which is 2048 x 10 plus 10 biases, or 20,490 parameters,
+and the convolutional layers below it are frozen.
 
-So about 8.7 percent of the network is trained, and that is deliberate. The
+So about 0.09 percent of the network is trained, and that is deliberate. The
 convolutional layers are already good at edges, textures and shapes, which do
 not change between photographs of cats and overhead views of crops. Only the
 final layer needs to learn which combination of features separates a river from
-a highway. Training 2 million parameters on 21,600 images is a well posed
-problem; training 23.5 million would begin to overfit and would cost far more
-compute than the accuracy gained.
+a highway. Training 20,490 parameters on 4,000 images is a well posed problem;
+training 23.5 million would begin to overfit and would cost far more compute
+than the accuracy gained.
 
 A second stage is available that unfreezes the last block and trains it with a
 lower learning rate. It is described in [config.py](src/landcover/config.py)
@@ -227,6 +250,17 @@ API drift.
 No workflow trains a model: a training run costs hours, and the test suite covers
 the same code paths on synthetic data in seconds.
 
+### Publishing
+
+`pages.yml` is the other half of the pipeline. A push to `main` that changes
+anything under `docs/` publishes that directory to GitHub Pages with
+`actions/deploy-pages`. Before it uploads, a step asserts that every `src` and
+`href` in `docs/index.html` resolves to a file that is actually committed, so a
+renamed or deleted figure fails the deploy rather than shipping a page with
+broken images. The page is served from the standard
+`https://<user>.github.io/<repo>/` address and can also be rebuilt by hand from
+the Actions tab.
+
 ## Reproducing the numbers
 
 ```bash
@@ -255,18 +289,21 @@ The 628 millisecond figure is a batch of one benchmark; the committed run measur
 the benchmark alone suggests. Neither number is a speedup estimate, only what was
 observed.
 
-The accuracy reported here is a validation accuracy from the final epoch, 82.67
-percent over 600 validation images, as recorded in `results/train_history.json`.
-It is not cherry picked from a larger sweep. It is not a test accuracy: the
-results table stays blank until `python -m landcover.evaluate` has run and written
-`results/metrics.json`, which is the number a reader should quote.
-the number the full configuration would reach. With the full dataset and a GPU
-the same code with the same seed would be expected to land higher, and the
-figures in this README were not cherry picked from a larger sweep.
+The numbers in the table above are test split numbers, written into
+`results/metrics.json` by `python -m landcover.evaluate` on 30 October 2026, and
+they are the numbers a reader should quote. The validation accuracy from the
+final epoch, 82.67 percent over 600 validation images as recorded in
+`results/train_history.json`, is an intermediate training measurement that is
+reported only for the learning curve in
+[docs/figures/history.png](docs/figures/history.png). Neither set of figures was
+cherry picked from a sweep: one run was measured, then evaluated.
 
-**The classes overlap physically.** As described in [Results](#results), the
-confusion between `HerbaceousVegetation` and `Pasture` is a property of the
-labelling, not a defect of the model. Both include land covered in grass.
+**One class carries most of the error.** As described in [Results](#results),
+`Highway` recall is 0.500, so a road patch is classified as something else about
+half the time. Partial occlusion by trees, the narrow and elongated shape of a
+road seen from above, and the similarity of asphalt to bare soil in `Pasture`
+and `AnnualCrop` all make it hard at 64 by 64 pixels. The remaining classes sit
+between F1 0.724 and 0.927.
 
 **The RGB dataset is a subset of EuroSAT.** EuroSAT also ships a 13 band
 multispectral version. The RGB version was used here because it is small enough
