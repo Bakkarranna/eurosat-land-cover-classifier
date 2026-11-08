@@ -38,3 +38,6 @@ train.log
 .vscode/
 .DS_Store
 Thumbs.db
+
+# leftover git history-rewrite log
+.filter-branch.log
